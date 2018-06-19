@@ -9,6 +9,9 @@ import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicInteger;
+
 public abstract class BaseServer implements Server {
 	
 
@@ -24,15 +27,44 @@ public abstract class BaseServer implements Server {
     protected ServerBootstrap b;
 	
     public void init() {
+        defLoopGroup = new DefaultEventLoopGroup(8, new ThreadFactory() {
+            private AtomicInteger index = new AtomicInteger(0);
+            @Override
+            public Thread newThread(Runnable r) {
+                return new Thread(r,"DEFAULTEVENTLOOPGROUP_"+index.incrementAndGet());
+            }
+        });
+
+        bossGroup = new NioEventLoopGroup(Runtime.getRuntime().availableProcessors(), new ThreadFactory() {
+            private AtomicInteger index = new AtomicInteger(0);
+
+            @Override
+            public Thread newThread(Runnable r) {
+                return new Thread(r,"BOSS_"+index.incrementAndGet());
+            }
+        });
+
+        workGroup = new NioEventLoopGroup(Runtime.getRuntime().availableProcessors(), new ThreadFactory() {
+            private AtomicInteger index = new AtomicInteger(0);
+
+            @Override
+            public Thread newThread(Runnable r) {
+                return new Thread(r,"WORK_"+index.incrementAndGet());
+            }
+        });
     	
-    	
-    	
+    	b = new ServerBootstrap();
     }
 	
 
 	@Override
 	public void shutdown() {
 		// TODO Auto-generated method stub
+        if(defLoopGroup != null){
+            defLoopGroup.shutdownGracefully();
+        }
+        bossGroup.shutdownGracefully();
+        workGroup.shutdownGracefully();
 
 	}
 
