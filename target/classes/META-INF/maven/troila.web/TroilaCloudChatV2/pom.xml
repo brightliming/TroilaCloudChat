@@ -1,0 +1,104 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>troila.web</groupId>
+  <artifactId>TroilaCloudChatV2</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
+  <name>TroilaCloudChatV2 ${project.version}</name>
+  <url>http://www.troila.com</url>
+   
+   
+  <developers>
+       <developer>
+           <id>3162057882</id>
+           <name>limingliang</name>
+           <roles>
+               <role>senior JAVA engineer</role>
+           </roles>
+           <email>limingbright@yahoo.com</email>
+           <timezone>8</timezone>
+       </developer>
+   </developers>
+   
+   
+   <properties>
+		<java.version>1.8</java.version>
+		<maven.compiler.encoding>UTF-8</maven.compiler.encoding>
+		<netty.version>4.1.6.Final</netty.version>
+		<logback.version>1.1.7</logback.version>
+		<protobuf.version>3.5.1</protobuf.version>
+	</properties>
+   
+   <dependencies>
+       <dependency>
+           <groupId>io.netty</groupId>
+           <artifactId>netty-all</artifactId>
+           <version>${netty.version}</version>
+       </dependency>
+       <dependency>
+           <groupId>ch.qos.logback</groupId>
+           <artifactId>logback-classic</artifactId>
+           <version>1.1.7</version>
+       </dependency>
+       <dependency>
+			<groupId>com.google.protobuf</groupId>
+			<artifactId>protobuf-java</artifactId>
+			<version>${protobuf.version}</version>
+		</dependency>
+   </dependencies>
+    
+    <build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.0</version>
+				<configuration>
+					<source>${java.version}</source>
+					<target>${java.version}</target>
+					<encoding>${maven.compiler.encoding}</encoding>
+					<goal>compile</goal>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-resources-plugin</artifactId>
+				<version>2.7</version>
+				<configuration>
+					<encoding>${project.build.sourceEncoding}</encoding>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-jar-plugin</artifactId>
+				<version>2.6</version>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-assembly-plugin</artifactId>
+				<configuration>
+					<descriptors>
+						<descriptor>src/assembly/assembly.xml</descriptor>
+					</descriptors>
+				</configuration>
+				<executions>
+					<execution>
+						<id>make-assembly</id>
+						<phase>package</phase>
+						<goals>
+							<goal>single</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>2.13</version>
+				<configuration>
+					<skip>true</skip>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+    
+</project>
