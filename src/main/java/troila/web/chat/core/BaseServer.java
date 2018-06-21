@@ -1,5 +1,8 @@
 package troila.web.chat.core;
 
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -14,7 +17,7 @@ public abstract class BaseServer implements Server {
 
     protected Logger logger = LoggerFactory.getLogger(getClass());
     protected String host = "localhost";
-    protected int port = 8099;
+    protected int port = 5588;
 
     protected DefaultEventLoopGroup defLoopGroup;
     protected NioEventLoopGroup bossGroup;
@@ -24,16 +27,42 @@ public abstract class BaseServer implements Server {
     protected ServerBootstrap b;
 	
     public void init() {
-    	
-    	
-    	
+    	 defLoopGroup = new DefaultEventLoopGroup(8, new ThreadFactory() {
+             private AtomicInteger index = new AtomicInteger(0);
+
+             @Override
+             public Thread newThread(Runnable r) {
+                 return new Thread(r, "DEFAULTEVENTLOOPGROUP_" + index.incrementAndGet());
+             }
+         });
+         bossGroup = new NioEventLoopGroup(Runtime.getRuntime().availableProcessors(), new ThreadFactory() {
+             private AtomicInteger index = new AtomicInteger(0);
+
+             @Override
+             public Thread newThread(Runnable r) {
+                 return new Thread(r, "BOSS_" + index.incrementAndGet());
+             }
+         });
+         workGroup = new NioEventLoopGroup(Runtime.getRuntime().availableProcessors() * 10, new ThreadFactory() {
+             private AtomicInteger index = new AtomicInteger(0);
+
+             @Override
+             public Thread newThread(Runnable r) {
+                 return new Thread(r, "WORK_" + index.incrementAndGet());
+             }
+         });
+
+         b = new ServerBootstrap();
     }
 	
 
 	@Override
 	public void shutdown() {
-		// TODO Auto-generated method stub
-
+		 if (defLoopGroup != null) {
+	            defLoopGroup.shutdownGracefully();
+	        }
+	        bossGroup.shutdownGracefully();
+	        workGroup.shutdownGracefully();
 	}
 
 }
