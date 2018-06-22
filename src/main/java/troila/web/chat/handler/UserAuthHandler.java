@@ -7,11 +7,22 @@ import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.websocketx.*;
 import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
+import troila.web.chat.utils.Conf;
 import troila.web.chat.utils.NettyUtil;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ *
+ * @ClassName:  UserAuthHandler   
+ * @Description:TODO(处理HTTP握手请求，校验token，升级协议成websocket)   
+ * @author: 卓朗科技 _limingliang
+ * @date:   2018年6月22日 上午9:24:53   
+ *     
+ * @Copyright: 2018 www.troila.com Inc. All rights reserved. 
+ * 注意：本内容仅限于天津卓朗科技信息技术股份有限公司内部传阅，禁止外泄以及用于其他的商业目
+ */
 public class UserAuthHandler extends SimpleChannelInboundHandler<Object> {
     private static final Logger logger = LoggerFactory.getLogger(UserAuthHandler.class);
 
@@ -25,7 +36,15 @@ public class UserAuthHandler extends SimpleChannelInboundHandler<Object> {
             handleWebSocket(ctx, (WebSocketFrame) msg);
         }
     }
-
+    /**
+     * 
+     * <p>Title: userEventTriggered</p>   
+     * <p>Description: 判断Channel是否长时间读空闲，是则移除Channel</p>   
+     * @param ctx
+     * @param evt
+     * @throws Exception   
+     * @see io.netty.channel.ChannelInboundHandlerAdapter#userEventTriggered(io.netty.channel.ChannelHandlerContext, java.lang.Object)
+     */
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         if (evt instanceof IdleStateEvent) {
@@ -47,8 +66,17 @@ public class UserAuthHandler extends SimpleChannelInboundHandler<Object> {
             ctx.channel().close();
             return;
         }
+        //验证权限
+        String uri = request.uri();
+        try {
+        	
+        }catch(Exception ex){
+        	logger.error(ex.getMessage());
+        	ctx.close();
+        }
+        //验证通过进行握手
         WebSocketServerHandshakerFactory handshakerFactory = new WebSocketServerHandshakerFactory(
-                Constants.WEBSOCKET_URL, null, true);
+                Conf.WEBSOCKET_CONTEXT, null, true);
         handshaker = handshakerFactory.newHandshaker(request);
         if (handshaker == null) {
             WebSocketServerHandshakerFactory.sendUnsupportedVersionResponse(ctx.channel());

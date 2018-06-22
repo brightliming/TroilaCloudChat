@@ -1,7 +1,7 @@
 option java_package="troila.web.chat.proto";
 option java_outer_classname="ChatProto";
 
-message ChatProto{
+message Message{
 	//参数代码  
 	required string header = 1;
 	//参数信息（实际的消息信息，Json字符串）
