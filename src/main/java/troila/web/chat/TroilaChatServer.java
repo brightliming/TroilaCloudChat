@@ -1,13 +1,9 @@
 package troila.web.chat;
 
-import java.io.FileInputStream;
-import java.io.InputStream;
 import java.net.InetSocketAddress;
-import java.security.KeyStore;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-
-import com.troila.redis.utils.ConfigureUtils;
+import java.util.concurrent.TimeUnit;
 
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
@@ -24,8 +20,10 @@ import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.handler.timeout.IdleStateHandler;
 import troila.web.chat.core.BaseServer;
+import troila.web.chat.handler.MessageHandler;
+import troila.web.chat.handler.RoomManager;
 import troila.web.chat.handler.UserAuthHandler;
-import troila.web.chat.proto.Info;
+import troila.web.chat.proto.ChatProto;
 import troila.web.chat.ssl.SSLInitializer;
 import troila.web.chat.utils.Conf;
 
@@ -60,7 +58,7 @@ public class TroilaChatServer extends BaseServer {
 								new ChunkedWriteHandler(), // 支持异步发送大的码流，一般用于发送文件流
 								new IdleStateHandler(60, 0, 0), // 检测链路是否读空闲
 								new ProtobufVarint32FrameDecoder(),
-								//new ProtobufDecoder(Info.Chat.getDefaultInstance()),
+								new ProtobufDecoder(ChatProto.Message.getDefaultInstance()),
 								new ProtobufVarint32LengthFieldPrepender(),
 								new ProtobufEncoder(),
 								new UserAuthHandler(),// 处理握手和认证
@@ -75,29 +73,24 @@ public class TroilaChatServer extends BaseServer {
 			logger.info("TroilaChatServer start success, port is:{}", addr.getPort());
 
 			// 定时扫描所有的Channel，关闭失效的Channel
-//			executorService.scheduleAtFixedRate(new Runnable() {
-//				@Override
-//				public void run() {
-//					logger.info("scanNotActiveChannel --------");
-//					UserInfoManager.scanNotActiveChannel();
-//				}
-//			}, 3, 60, TimeUnit.SECONDS);
+			executorService.scheduleAtFixedRate(new Runnable() {
+				@Override
+				public void run() {
+					logger.info("scanNotActiveChannel --------");
+					RoomManager.scanNotActiveChannel();
+				}
+			}, 3, 60, TimeUnit.SECONDS);
 
 			// 定时向所有客户端发送Ping消息
-//			executorService.scheduleAtFixedRate(new Runnable() {
-//				@Override
-//				public void run() {
-//					UserInfoManager.broadCastPing();
-//				}
-//			}, 3, 50, TimeUnit.SECONDS);
+			executorService.scheduleAtFixedRate(new Runnable() {
+				@Override
+				public void run() {
+					RoomManager.broadCastPing();
+				}
+			}, 3, 50, TimeUnit.SECONDS);
 			
 		} catch (InterruptedException e) {
 			logger.error("TroilaChatServer start fail,", e);
-		}finally {
-			if (executorService != null) {
-				executorService.shutdown();
-			}
-			super.shutdown();
 		}
 
 	}

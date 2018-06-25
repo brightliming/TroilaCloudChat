@@ -11,6 +11,16 @@
  */
 package troila.web.chat.service;
 
+import java.io.ByteArrayInputStream;
+import java.io.ObjectInputStream;
+
+import com.troila.redis.JedisInterface;
+import com.troila.redis.factory.JedisFactory;
+import com.troila.redis.utils.ConfigureUtils;
+
+import troila.web.chat.proto.User;
+import troila.web.chat.utils.BeanUtil;
+
 /**   
  * @ClassName:  RedisService   
  * @Description:TODO(redis操作Service)   
@@ -21,5 +31,23 @@ package troila.web.chat.service;
  * 注意：本内容仅限于天津卓朗科技信息技术股份有限公司内部传阅，禁止外泄以及用于其他的商业目 
  */
 public class RedisService {
-
+	private final static JedisInterface redisUtils = JedisFactory.getJedis(ConfigureUtils.getConfigs());
+	
+	public boolean existKey(String key) {
+		return redisUtils.exists(key);
+	}
+	/**
+	 * 
+	 * @Title: getUserByToken   
+	 * @Description: TODO(通过token从redis中获得用户信息)   
+	 * @param: @param token
+	 * @param: @return      
+	 * @return: User      
+	 * @throws
+	 */
+	public User getUserByToken(String token) {
+		return (User)BeanUtil.unserialize(redisUtils.getByte(token.getBytes()));
+	}
+	
+	
 }

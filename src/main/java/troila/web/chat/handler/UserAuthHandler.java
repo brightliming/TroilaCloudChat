@@ -7,6 +7,11 @@ import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.websocketx.*;
 import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
+import troila.web.chat.proto.ChatProto;
+import troila.web.chat.proto.Person;
+import troila.web.chat.proto.User;
+import troila.web.chat.service.AuthCheckService;
+import troila.web.chat.service.RedisService;
 import troila.web.chat.utils.Conf;
 import troila.web.chat.utils.NettyUtil;
 
@@ -32,8 +37,8 @@ public class UserAuthHandler extends SimpleChannelInboundHandler<Object> {
     protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof FullHttpRequest) {
             handleHttpRequest(ctx, (FullHttpRequest) msg);
-        } else if (msg instanceof WebSocketFrame) {
-            handleWebSocket(ctx, (WebSocketFrame) msg);
+        } else{
+            handleWebSocket(ctx, msg);
         }
     }
     /**
@@ -53,8 +58,7 @@ public class UserAuthHandler extends SimpleChannelInboundHandler<Object> {
             if (evnet.state().equals(IdleState.READER_IDLE)) {
                 final String remoteAddress = NettyUtil.parseChannelRemoteAddr(ctx.channel());
                 logger.warn("NETTY SERVER PIPELINE: IDLE exception [{}]", remoteAddress);
-                UserManager.removeChannel(ctx.channel());
-                UserManager.broadCastInfo(ChatCode.SYS_USER_COUNT,UserManager.getAuthUserCount());
+                RoomManager.removePerson(ctx.channel());
             }
         }
         ctx.fireUserEventTriggered(evt);
@@ -67,78 +71,66 @@ public class UserAuthHandler extends SimpleChannelInboundHandler<Object> {
             return;
         }
         //验证权限
-        String uri = request.uri();
         try {
-        	
+        	new AuthCheckService().checkUserAuth(request.getUri());
         }catch(Exception ex){
         	logger.error(ex.getMessage());
         	ctx.close();
+        	return;
         }
         //验证通过进行握手
         WebSocketServerHandshakerFactory handshakerFactory = new WebSocketServerHandshakerFactory(
-                Conf.WEBSOCKET_CONTEXT, null, true);
+                Conf.WEBSOCKET_URI, null, true);
         handshaker = handshakerFactory.newHandshaker(request);
         if (handshaker == null) {
             WebSocketServerHandshakerFactory.sendUnsupportedVersionResponse(ctx.channel());
         } else {
             // 动态加入websocket的编解码处理
             handshaker.handshake(ctx.channel(), request);
-            UserInfo userInfo = new UserInfo();
-            userInfo.setAddr(NettyUtil.parseChannelRemoteAddr(ctx.channel()));
-            // 存储已经连接的Channel
-            UserManager.addChannel(ctx.channel());
+            // 握手成功，获取用户信息
+            User user = new RedisService().getUserByToken(request.getUri().split("/")[3]);
+            
+            Person person = new Person(); 
+            person.setId(""+user.getUserId());
+            person.setNickName(user.getUserName());
+            person.setRoomId(request.getUri().split("/")[2]);
+            person.setAddr(NettyUtil.parseChannelRemoteAddr(ctx.channel()));
+            person.setChannel(ctx.channel());
+            person.setTime(System.currentTimeMillis());
+            // 新人员进入直播间
+            RoomManager.addPerson(person);
         }
     }
 
-    private void handleWebSocket(ChannelHandlerContext ctx, WebSocketFrame frame) {
+    private void handleWebSocket(ChannelHandlerContext ctx, Object frame) {
         // 判断是否关闭链路命令
         if (frame instanceof CloseWebSocketFrame) {
-            handshaker.close(ctx.channel(), (CloseWebSocketFrame) frame.retain());
-            UserManager.removeChannel(ctx.channel());
+            handshaker.close(ctx.channel(), ((CloseWebSocketFrame) frame).retain());
+            RoomManager.removePerson(ctx.channel());
             return;
         }
         // 判断是否Ping消息
         if (frame instanceof PingWebSocketFrame) {
-            logger.info("ping message:{}", frame.content().retain());
-            ctx.writeAndFlush(new PongWebSocketFrame(frame.content().retain()));
+            logger.info("ping message:{}", ((PingWebSocketFrame)frame).content().retain());
+            ctx.writeAndFlush(new PongWebSocketFrame( ((PingWebSocketFrame)frame).content().retain()));
             return;
         }
         // 判断是否Pong消息
         if (frame instanceof PongWebSocketFrame) {
-            logger.info("pong message:{}", frame.content().retain());
-            ctx.writeAndFlush(new PongWebSocketFrame(frame.content().retain()));
+            logger.info("pong message:{}",  ((PongWebSocketFrame)frame).content().retain());
+            ctx.writeAndFlush(new PongWebSocketFrame(((PongWebSocketFrame)frame).content().retain()));
             return;
         }
-
+        // 文本消息
+        if (frame instanceof TextWebSocketFrame) {
+        	logger.info("text message:{}",  ((TextWebSocketFrame)frame).text());
+        	return;
+        }
         // 本程序目前只支持文本消息
-        if (!(frame instanceof TextWebSocketFrame)) {
+        if (!(frame instanceof ChatProto.Message)) {
             throw new UnsupportedOperationException(frame.getClass().getName() + " frame type not supported");
-        }
-        String message = ((TextWebSocketFrame) frame).text();
-        JSONObject json = JSONObject.parseObject(message);
-        int code = json.getInteger("code");
-        Channel channel = ctx.channel();
-        switch (code) {
-            case ChatCode.PING_CODE:
-            case ChatCode.PONG_CODE:
-                UserManager.updateUserTime(channel);
-//                UserInfoManager.sendPong(ctx.channel());
-                logger.info("receive pong message, address: {}",NettyUtil.parseChannelRemoteAddr(channel));
-                return;
-            case ChatCode.AUTH_CODE:
-                boolean isSuccess = UserManager.saveUser(channel, json.getString("nick"));
-                UserManager.sendInfo(channel,ChatCode.SYS_AUTH_STATE,isSuccess);
-                if (isSuccess) {
-                    UserManager.broadCastInfo(ChatCode.SYS_USER_COUNT,UserManager.getAuthUserCount());
-                }
-                return;
-            case ChatCode.MESS_CODE: //普通的消息留给MessageHandler处理
-                break;
-            default:
-                logger.warn("The code [{}] can't be auth!!!", code);
-                return;
-        }
+        }       
         //后续消息交给MessageHandler处理
-        ctx.fireChannelRead(frame.retain());
+        ctx.fireChannelRead(frame);
     }
 }

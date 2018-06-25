@@ -1,6 +1,6 @@
 package troila.web.chat.action;
 
-import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.Channel;
 
 /**
  * 聊天业务处理类
@@ -8,5 +8,5 @@ import io.netty.channel.ChannelHandlerContext;
  *
  */
 public interface IAction {
-	void execute(String message,ChannelHandlerContext ctx,String type);
+	void execute(Channel channel,String message);
 }

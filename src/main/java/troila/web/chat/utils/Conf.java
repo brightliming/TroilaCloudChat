@@ -15,8 +15,9 @@ public class Conf {
 	
 	public final static int SERVER_PORT = Integer.parseInt(ConfigureUtils.getConfig("port"));
 	
-	public final static String WEBSOCKET_CONTEXT = ConfigureUtils.getConfig("context");
-
+	public final static String WEBSOCKET_URI = ConfigureUtils.getConfig("websocket.url");
+	public final static String CONTEXT = ConfigureUtils.getConfig("context");
+	
 	public final static boolean SSL_OPEN = ConfigureUtils.getConfig("ssl.open").equals("true");
 	public final static String SSL_CERTIFICATE_TYPE = ConfigureUtils.getConfig("ssl.certificate.type");
 	public final static String SSL_CERTIFICATE = ConfigureUtils.getConfig("ssl.certificate.localtion");
