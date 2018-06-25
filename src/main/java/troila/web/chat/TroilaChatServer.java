@@ -56,7 +56,7 @@ public class TroilaChatServer extends BaseServer {
 								new HttpServerCodec(), // 请求解码器
 								new HttpObjectAggregator(65536), // 将多个消息转换成单一的消息对象
 								new ChunkedWriteHandler(), // 支持异步发送大的码流，一般用于发送文件流
-								new IdleStateHandler(60, 0, 0), // 检测链路是否读空闲
+								//new IdleStateHandler(60, 0, 0), // 检测链路是否读空闲
 								new ProtobufVarint32FrameDecoder(),
 								new ProtobufDecoder(ChatProto.Message.getDefaultInstance()),
 								new ProtobufVarint32LengthFieldPrepender(),
@@ -73,21 +73,21 @@ public class TroilaChatServer extends BaseServer {
 			logger.info("TroilaChatServer start success, port is:{}", addr.getPort());
 
 			// 定时扫描所有的Channel，关闭失效的Channel
-			executorService.scheduleAtFixedRate(new Runnable() {
-				@Override
-				public void run() {
-					logger.info("scanNotActiveChannel --------");
-					RoomManager.scanNotActiveChannel();
-				}
-			}, 3, 60, TimeUnit.SECONDS);
+//			executorService.scheduleAtFixedRate(new Runnable() {
+//				@Override
+//				public void run() {
+//					logger.info("scanNotActiveChannel --------");
+//					RoomManager.scanNotActiveChannel();
+//				}
+//			}, 3, 60, TimeUnit.SECONDS);
 
 			// 定时向所有客户端发送Ping消息
-			executorService.scheduleAtFixedRate(new Runnable() {
-				@Override
-				public void run() {
-					RoomManager.broadCastPing();
-				}
-			}, 3, 50, TimeUnit.SECONDS);
+//			executorService.scheduleAtFixedRate(new Runnable() {
+//				@Override
+//				public void run() {
+//					RoomManager.broadCastPing();
+//				}
+//			}, 3, 50, TimeUnit.SECONDS);
 			
 		} catch (InterruptedException e) {
 			logger.error("TroilaChatServer start fail,", e);

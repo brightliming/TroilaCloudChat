@@ -14,6 +14,7 @@ package troila.web.chat.service;
 import troila.web.chat.service.chain.AbstractCheckChain;
 import troila.web.chat.service.chain.DataChecker;
 import troila.web.chat.service.chain.TokenChecker;
+import troila.web.chat.utils.Conf;
 
 /**   
  * @ClassName:  AuthCheckService   
@@ -35,7 +36,9 @@ public class AuthCheckService {
 	 */
 	public void checkUserAuth(String request) throws Exception{
 		AbstractCheckChain checker = new DataChecker();
-		checker.setNextHandler(new TokenChecker());
+		if(!Conf.TEST) {
+			checker.setNextHandler(new TokenChecker());
+		}
 		checker.checkRequest(request);
 	}
 	

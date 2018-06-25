@@ -1,7 +1,10 @@
 package troila.web.chat.handler;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -14,6 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.alibaba.fastjson.JSON;
+import com.troila.httpclient.TroilaHttpClientUtil;
 
 import io.netty.channel.Channel;
 import troila.web.chat.proto.ChatProto;
@@ -21,6 +25,7 @@ import troila.web.chat.proto.NormalMessage;
 import troila.web.chat.proto.Person;
 import troila.web.chat.proto.ResponseCode;
 import troila.web.chat.proto.Room;
+import troila.web.chat.utils.Conf;
 import troila.web.chat.utils.NettyUtil;
 
 /**
@@ -95,7 +100,9 @@ public class RoomManager {
 				@Override
 				public void run() {
 					//向房间所有人员广播人员离开消息
-					broadCastInfo(person.getRoomId(),ResponseCode.OUTROOM,person);
+					if(person != null) {
+						broadCastInfo(person.getRoomId(),ResponseCode.OUTROOM,person);
+					}					
 				}
 			});
 			
@@ -213,11 +220,18 @@ public class RoomManager {
 						.setBody("踢人消息格式错误："+message).build());
 			}
 			//调用踢人接口，给被踢人员断掉拉流
-			
-			
-			
-			
-			//未实现
+			if(!Conf.TEST) {
+				Map<String, Object> param = new HashMap<String,Object>();
+				param.put("liveRoomId", person.getRoomId());
+				param.put("userId",person.getId());
+				try {
+					TroilaHttpClientUtil.httpPostExecute(Conf.LIVEAPI_ADDR+Conf.KICK_INTERFACE,param);
+				} catch (Exception e) {
+					logger.error(e.getMessage());
+					channel.writeAndFlush(ChatProto.Message.newBuilder().setHeader(ResponseCode.FAIL.getCode())
+							.setBody("踢人接口调用失败："+message).build());
+				}
+			}			
 			Person tmp = null;
 			//直播间广播踢人消息
 			if(roomInfos.get(person.getRoomId()) != null && roomInfos.get(person.getRoomId()).size() != 0) {
@@ -309,7 +323,8 @@ public class RoomManager {
 			if (roomInfos.containsKey(person.getRoomId())) {
 				roomInfos.get(person.getRoomId()).add(person);
 			} else {
-				List<Person> personList = Arrays.asList(person);
+				List<Person> personList = new ArrayList<>();
+				personList.add(person);
 				roomInfos.put(person.getRoomId(), personList);
 			}
 		} finally {
