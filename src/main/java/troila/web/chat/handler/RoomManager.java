@@ -1,7 +1,6 @@
 package troila.web.chat.handler;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -20,7 +19,6 @@ import com.alibaba.fastjson.JSON;
 import com.troila.httpclient.TroilaHttpClientUtil;
 
 import io.netty.channel.Channel;
-import troila.web.chat.proto.ChatProto;
 import troila.web.chat.proto.Message;
 import troila.web.chat.proto.NormalMessage;
 import troila.web.chat.proto.Person;
@@ -152,7 +150,7 @@ public class RoomManager {
     public static void mutePerson(Channel channel, String message) {
     	try {
 			rwLock.readLock().lock();
-			Person person = (Person)JSON.parse(message);
+			Person person = JSON.parseObject(message,Person.class);
 			if(StringUtils.isBlank(person.getId()) || StringUtils.isBlank(person.getRoomId())) {
 				logger.error("禁言消息格式错误：{}",message);
 				channel.writeAndFlush(CodecContext.encode(new Message(ResponseCode.FAIL.getCode(),MessageConstants.MUTE_MESSAGE_ERROR+message)));
@@ -181,7 +179,7 @@ public class RoomManager {
     public static void unMutePerson(Channel channel, String message) {
     	try {
 			rwLock.readLock().lock();
-			Person person = (Person)JSON.parse(message);
+			Person person = JSON.parseObject(message,Person.class);
 			if(StringUtils.isBlank(person.getId()) || StringUtils.isBlank(person.getRoomId())) {
 				logger.error("解禁言消息格式错误：{}",message);
 				channel.writeAndFlush(CodecContext.encode(new Message(ResponseCode.FAIL.getCode(),MessageConstants.UNMUTE_MESSAGE_ERROR+message)));
@@ -211,8 +209,8 @@ public class RoomManager {
      */
     public static void kickPerson(Channel channel, String message) {
     	try {
-			rwLock.readLock().lock();
-			Person person = (Person)JSON.parse(message);
+			rwLock.writeLock().lock();
+			Person person = JSON.parseObject(message, Person.class);
 			if(StringUtils.isBlank(person.getId()) || StringUtils.isBlank(person.getRoomId())) {
 				logger.error("踢人消息格式错误：{}",message);
 				channel.writeAndFlush(CodecContext.encode(new Message(ResponseCode.FAIL.getCode(),MessageConstants.KICK_MESSAGE_ERROR)));
@@ -247,7 +245,7 @@ public class RoomManager {
 			//给主播反馈踢人成功消息
 			channel.writeAndFlush(CodecContext.encode(new Message(ResponseCode.SUCCESS.getCode(),MessageConstants.KICK_SUCCESS)));
 		}finally {
-			rwLock.readLock().unlock();
+			rwLock.writeLock().unlock();
 		}
     }
     
@@ -376,7 +374,7 @@ public class RoomManager {
 	 */
 	private static void uniCastInfo(Person person, ResponseCode code, Object mess) {
 		logger.info("单播消息，接收人：{}，事件：[{}:{}]，信息：{}", person.getNickName(), code.getCode(), code.getValue(),
-				JSON.toJSON(mess));
+				JSON.toJSONString(mess));
 		Channel channel = person.getChannel();
 		if (channel == null || !channel.isActive()) {
 			logger.warn("用户通道已经关闭：{}", person.getNickName());
