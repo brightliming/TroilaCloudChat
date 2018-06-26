@@ -52,18 +52,22 @@ public class TroilaChatServer extends BaseServer {
 						if(Conf.SSL_OPEN) {
 							pipeline.addLast(new SslHandler(SSLInitializer.sslEngine));
 						}
-						ch.pipeline().addLast(defLoopGroup,
+						pipeline.addLast(defLoopGroup,
 								new HttpServerCodec(), // 请求解码器
 								new HttpObjectAggregator(65536), // 将多个消息转换成单一的消息对象
-								new ChunkedWriteHandler(), // 支持异步发送大的码流，一般用于发送文件流
+								new ChunkedWriteHandler() // 支持异步发送大的码流，一般用于发送文件流
 								//new IdleStateHandler(60, 0, 0), // 检测链路是否读空闲
-								new ProtobufVarint32FrameDecoder(),
+						);
+						if(Conf.USE_PROTO) {
+							//启用protobuf编解码
+							pipeline.addLast(new ProtobufVarint32FrameDecoder(),
 								new ProtobufDecoder(ChatProto.Message.getDefaultInstance()),
 								new ProtobufVarint32LengthFieldPrepender(),
-								new ProtobufEncoder(),
-								new UserAuthHandler(),// 处理握手和认证
+								new ProtobufEncoder());
+						}
+						pipeline.addLast(new UserAuthHandler(),// 处理握手和认证
 								new MessageHandler() // 处理消息的发送
-						);
+								);
 					}
 				});
 

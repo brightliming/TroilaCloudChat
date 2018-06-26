@@ -8,6 +8,8 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import troila.web.chat.action.factory.ActionFactory;
 import troila.web.chat.proto.ActionCode;
 import troila.web.chat.proto.ChatProto;
+import troila.web.chat.proto.Message;
+import troila.web.codec.CodecContext;
 
 
 public class MessageHandler extends SimpleChannelInboundHandler<Object> {
@@ -17,12 +19,25 @@ public class MessageHandler extends SimpleChannelInboundHandler<Object> {
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, Object mess)
             throws Exception {
-    	ChatProto.Message message = (ChatProto.Message)mess;
-    	if(!ActionCode.codeList().contains(message.getHeader())) {
-    		logger.info("Unsupport message code number:"+message.getHeader());
-    		return; 
-    	}
-    	ActionFactory.getAction(message.getHeader()).execute(ctx.channel(),message.getBody());
+    		Object message = CodecContext.decode(mess);
+        	if(message instanceof ChatProto.Message) {
+        		ChatProto.Message bean = (ChatProto.Message)message;
+            	if(!ActionCode.codeList().contains(bean.getHeader())) {
+            		logger.warn("Unsupport message code number:"+bean.getHeader());
+            		return; 
+            	}
+            	ActionFactory.getAction(bean.getHeader()).execute(ctx.channel(),bean.getBody());
+        	}else if(message instanceof Message){
+        		Message bean = (Message)message;
+            	if(!ActionCode.codeList().contains(bean.getHeader())) {
+            		logger.warn("Unsupport message code number:"+bean.getHeader());
+            		return; 
+            	}
+            	ActionFactory.getAction(bean.getHeader()).execute(ctx.channel(),bean.getBody());
+        	}else {
+        		logger.warn("Unsupport message");
+        		return; 
+        	}	    	
     }
 
     @Override

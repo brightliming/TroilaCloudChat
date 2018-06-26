@@ -14,6 +14,7 @@ public class Conf {
 	}
 	public final static int SERVER_PORT = Integer.parseInt(ConfigureUtils.getConfig("port"));
 	public final static boolean TEST = ConfigureUtils.getConfig("test").equals("true");
+	public final static boolean USE_PROTO = ConfigureUtils.getConfig("userproto").equals("true");
 	
 	public final static String WEBSOCKET_URI = ConfigureUtils.getConfig("websocket.url");
 	public final static String CONTEXT = ConfigureUtils.getConfig("context");

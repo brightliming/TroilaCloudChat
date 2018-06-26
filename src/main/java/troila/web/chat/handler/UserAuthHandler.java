@@ -118,19 +118,28 @@ public class UserAuthHandler extends SimpleChannelInboundHandler<Object> {
         // 判断是否Pong消息
         if (frame instanceof PongWebSocketFrame) {
             logger.info("pong message:{}",  ((PongWebSocketFrame)frame).content().retain());
-            ctx.writeAndFlush(new PongWebSocketFrame(((PongWebSocketFrame)frame).content().retain()));
+            ctx.writeAndFlush(new PingWebSocketFrame(((PongWebSocketFrame)frame).content().retain()));
             return;
         }
-        // 文本消息
-        if (frame instanceof TextWebSocketFrame) {
-        	logger.info("text message:{}",  ((TextWebSocketFrame)frame).text());
-        	return;
+        if(Conf.USE_PROTO) {
+        	 // 文本消息
+            if (frame instanceof TextWebSocketFrame) {
+            	logger.info("text message:{}",  ((TextWebSocketFrame)frame).text());
+            	return;
+            }
+            // protobuf
+            if (!(frame instanceof ChatProto.Message)) {
+                throw new UnsupportedOperationException(frame.getClass().getName() + " frame type not supported");
+            } 
+            //后续消息交给MessageHandler处理
+            ctx.fireChannelRead((ChatProto.Message)frame);
+        }else {
+            // 文本消息
+            if (!(frame instanceof TextWebSocketFrame)) {
+                throw new UnsupportedOperationException(frame.getClass().getName() + " frame type not supported");
+            } 
+            //后续消息交给MessageHandler处理
+            ctx.fireChannelRead(((TextWebSocketFrame)frame).retain());
         }
-        // 本程序目前只支持文本消息
-        if (!(frame instanceof ChatProto.Message)) {
-            throw new UnsupportedOperationException(frame.getClass().getName() + " frame type not supported");
-        }       
-        //后续消息交给MessageHandler处理
-        ctx.fireChannelRead(frame);
     }
 }

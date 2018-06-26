@@ -21,12 +21,15 @@ import com.troila.httpclient.TroilaHttpClientUtil;
 
 import io.netty.channel.Channel;
 import troila.web.chat.proto.ChatProto;
+import troila.web.chat.proto.Message;
 import troila.web.chat.proto.NormalMessage;
 import troila.web.chat.proto.Person;
 import troila.web.chat.proto.ResponseCode;
 import troila.web.chat.proto.Room;
 import troila.web.chat.utils.Conf;
+import troila.web.chat.utils.MessageConstants;
 import troila.web.chat.utils.NettyUtil;
+import troila.web.codec.CodecContext;
 
 /**
  * 
@@ -52,6 +55,8 @@ public class RoomManager {
 	 * 房间通道信息
 	 */
 	private static ConcurrentMap<String, List<Person>> roomInfos = new ConcurrentHashMap<>();
+	
+	
 
 	/**
 	 * 
@@ -150,18 +155,15 @@ public class RoomManager {
 			Person person = (Person)JSON.parse(message);
 			if(StringUtils.isBlank(person.getId()) || StringUtils.isBlank(person.getRoomId())) {
 				logger.error("禁言消息格式错误：{}",message);
-				channel.writeAndFlush(ChatProto.Message.newBuilder().setHeader(ResponseCode.FAIL.getCode())
-						.setBody("禁言消息格式错误："+message).build());
+				channel.writeAndFlush(CodecContext.encode(new Message(ResponseCode.FAIL.getCode(),MessageConstants.MUTE_MESSAGE_ERROR+message)));
 			}
 			if(roomInfos.get(person.getRoomId()) != null && roomInfos.get(person.getRoomId()).size() != 0) {
 				for(Person ps : roomInfos.get(person.getRoomId())) {
 					if(ps.getId().equals(person.getId())) {
-						ps.getChannel().writeAndFlush(ChatProto.Message.newBuilder()
-								.setHeader(ResponseCode.MUTE.getCode()).build());
+						ps.getChannel().writeAndFlush(CodecContext.encode(new Message(ResponseCode.MUTE.getCode())));
 					}
 				}
-				channel.writeAndFlush(ChatProto.Message.newBuilder().setHeader(ResponseCode.SUCCESS.getCode())
-						.setBody("禁言成功").build());
+				channel.writeAndFlush(CodecContext.encode(new Message(ResponseCode.SUCCESS.getCode(),MessageConstants.MUTE_SUCCESS)));
 			}
 			
 		}finally {
@@ -182,18 +184,15 @@ public class RoomManager {
 			Person person = (Person)JSON.parse(message);
 			if(StringUtils.isBlank(person.getId()) || StringUtils.isBlank(person.getRoomId())) {
 				logger.error("解禁言消息格式错误：{}",message);
-				channel.writeAndFlush(ChatProto.Message.newBuilder().setHeader(ResponseCode.FAIL.getCode())
-						.setBody("解禁言消息格式错误："+message).build());
+				channel.writeAndFlush(CodecContext.encode(new Message(ResponseCode.FAIL.getCode(),MessageConstants.UNMUTE_MESSAGE_ERROR+message)));
 			}
 			if(roomInfos.get(person.getRoomId()) != null && roomInfos.get(person.getRoomId()).size() != 0) {
 				for(Person ps : roomInfos.get(person.getRoomId())) {
 					if(ps.getId().equals(person.getId())) {
-						ps.getChannel().writeAndFlush(ChatProto.Message.newBuilder()
-								.setHeader(ResponseCode.UNMUTE.getCode()).build());
+						ps.getChannel().writeAndFlush(CodecContext.encode(new Message(ResponseCode.UNMUTE.getCode())));
 					}
 				}
-				channel.writeAndFlush(ChatProto.Message.newBuilder().setHeader(ResponseCode.SUCCESS.getCode())
-						.setBody("解禁言成功").build());
+				channel.writeAndFlush(CodecContext.encode(new Message(ResponseCode.SUCCESS.getCode(),MessageConstants.UNMUTE_SUCCESS)));
 			}
 			
 		}finally {
@@ -216,8 +215,7 @@ public class RoomManager {
 			Person person = (Person)JSON.parse(message);
 			if(StringUtils.isBlank(person.getId()) || StringUtils.isBlank(person.getRoomId())) {
 				logger.error("踢人消息格式错误：{}",message);
-				channel.writeAndFlush(ChatProto.Message.newBuilder().setHeader(ResponseCode.FAIL.getCode())
-						.setBody("踢人消息格式错误："+message).build());
+				channel.writeAndFlush(CodecContext.encode(new Message(ResponseCode.FAIL.getCode(),MessageConstants.KICK_MESSAGE_ERROR)));
 			}
 			//调用踢人接口，给被踢人员断掉拉流
 			if(!Conf.TEST) {
@@ -228,8 +226,7 @@ public class RoomManager {
 					TroilaHttpClientUtil.httpPostExecute(Conf.LIVEAPI_ADDR+Conf.KICK_INTERFACE,param);
 				} catch (Exception e) {
 					logger.error(e.getMessage());
-					channel.writeAndFlush(ChatProto.Message.newBuilder().setHeader(ResponseCode.FAIL.getCode())
-							.setBody("踢人接口调用失败："+message).build());
+					channel.writeAndFlush(CodecContext.encode(new Message(ResponseCode.FAIL.getCode(),MessageConstants.KICK_ERROR)));
 				}
 			}			
 			Person tmp = null;
@@ -241,14 +238,14 @@ public class RoomManager {
 					}
 				}
 			}
-			//告诉用户自己被踢
-			tmp.getChannel().writeAndFlush(ChatProto.Message.newBuilder()
-					.setHeader(ResponseCode.KICK.getCode()).build());
-			//移除用户
-			removePerson(tmp.getChannel());
+			if(tmp != null) {
+				//告诉用户自己被踢
+				tmp.getChannel().writeAndFlush(CodecContext.encode(new Message(ResponseCode.KICK.getCode())));
+				//移除用户
+				removePerson(tmp.getChannel());
+			}	
 			//给主播反馈踢人成功消息
-			channel.writeAndFlush(ChatProto.Message.newBuilder().setHeader(ResponseCode.SUCCESS.getCode())
-					.setBody("踢人成功").build());
+			channel.writeAndFlush(CodecContext.encode(new Message(ResponseCode.SUCCESS.getCode(),MessageConstants.KICK_SUCCESS)));
 		}finally {
 			rwLock.readLock().unlock();
 		}
@@ -284,8 +281,7 @@ public class RoomManager {
             for (Channel ch : keySet) {
                 Person person = userInfos.get(ch);
                 if (person == null) continue;
-                ch.writeAndFlush(ChatProto.Message.newBuilder()
-                		.setHeader(ResponseCode.PING.getCode()).build());
+                ch.writeAndFlush(CodecContext.encode(new Message(ResponseCode.PING.getCode())));
             }
         } finally {
             rwLock.readLock().unlock();
@@ -347,8 +343,7 @@ public class RoomManager {
 			for (Person ps : persons) {
 				if (ps == null || ps.getChannel() == null || !ps.getChannel().isActive())
 					continue;
-				ps.getChannel().writeAndFlush(ChatProto.Message.newBuilder().setHeader(code.getCode())
-						.setBody(JSON.toJSONString(mess)).build());
+				ps.getChannel().writeAndFlush(CodecContext.encode(new Message(code.getCode(),JSON.toJSONString(mess))));
 			}
 		} finally {
 			rwLock.readLock().unlock();
@@ -368,7 +363,7 @@ public class RoomManager {
 			room.setId(person.getRoomId());
 			room.setPersonList(persons);
 			room.setCount(persons.size());
-			uniCastInfo(person, ResponseCode.INROOM.ROOM, room);
+			uniCastInfo(person, ResponseCode.ROOM, room);
 		} finally {
 			rwLock.readLock().unlock();
 		}
@@ -386,7 +381,6 @@ public class RoomManager {
 		if (channel == null || !channel.isActive()) {
 			logger.warn("用户通道已经关闭：{}", person.getNickName());
 		}
-		channel.writeAndFlush(
-				ChatProto.Message.newBuilder().setHeader(code.getCode()).setBody(JSON.toJSONString(mess)).build());
+		channel.writeAndFlush(CodecContext.encode(new Message(code.getCode(),JSON.toJSONString(mess))));
 	}
 }
