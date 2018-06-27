@@ -14,9 +14,7 @@ public enum ResponseCode {
 	TURNANCHOR("2007","转换主播"),
 	TURNAUDIENCE("2008","转换用户"),
 	PING("2009","服务端PING消息"),
-	
-	/**异常信息**/
-	ERROR("4000","服务器异常");
+	REPEATLOGIN("2010","重复登录，被顶出直播间");
 	
 	private String code;
 	

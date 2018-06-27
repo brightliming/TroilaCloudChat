@@ -63,7 +63,7 @@ public class RoomManager {
 	 */
 	public static void addPerson(Person person) {
 		// 将人员加入到房间
-		addChannel(person);
+		boolean newUser = addChannel(person);
 		executor.execute(new Runnable() {
 			@Override
 			public void run() {
@@ -71,14 +71,18 @@ public class RoomManager {
 				sendRoomInfo(person);
 			}
 		});
-		executor.execute(new Runnable() {
-			@Override
-			public void run() {
-				// 广播用户登录消息给当前房间用户
-				broadCastInfo(person.getRoomId(), ResponseCode.INROOM, person);
-			}
-		});
-
+		/**
+		 * 如果是新用户则通知房间其他用户，如果是老用户重复登录，则不通知
+		 */
+		if(newUser) {
+			executor.execute(new Runnable() {
+				@Override
+				public void run() {
+					// 广播用户登录消息给当前房间用户
+					broadCastInfo(person.getRoomId(), ResponseCode.INROOM, person);
+				}
+			});
+		}
 	}
 
 	/**
@@ -304,23 +308,41 @@ public class RoomManager {
             }
     }
 	/**
-	 * 
+	 * 用户已经存在房间  false  新用户true
 	 * @Title: addChannel @Description: TODO(将通道加入房间) @param: @param
 	 * roomId @param: @param channel @return: void @throws
 	 */
-	private static void addChannel(Person person) {
+	private static boolean addChannel(Person person) {
 		try {
 			rwLock.writeLock().lock();
+			boolean newUser = true;
 			// 人员与通道对应
 			userInfos.put(person.getChannel(), person);
 			// room与人员对应
 			if (roomInfos.containsKey(person.getRoomId())) {
-				roomInfos.get(person.getRoomId()).add(person);
+				List<Person> persons = roomInfos.get(person.getRoomId());
+				//如果用户已经在该房间，则踢出之前进入的用户并发送通知给他
+				Person tmp = null;
+				for(Person ps : persons) {
+					if(ps.getId().equals(person.getId()) && ps.getRoomId().equals(person.getRoomId())) {
+						ps.getChannel().writeAndFlush(CodecContext.encode(new Message(ResponseCode.REPEATLOGIN.getCode(),MessageConstants.REPEAT_LOGIN)));	
+						tmp = ps;						
+						break;
+					}
+				}
+				if(tmp != null) {
+					newUser = false;
+					userInfos.remove(tmp.getChannel());
+					tmp.getChannel().close();
+					persons.remove(tmp);
+				}
+				
 			} else {
 				List<Person> personList = new ArrayList<>();
 				personList.add(person);
 				roomInfos.put(person.getRoomId(), personList);
 			}
+			return newUser;
 		} finally {
 			rwLock.writeLock().unlock();
 		}

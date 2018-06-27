@@ -11,11 +11,6 @@
  */
 package troila.web.chat.service;
 
-import java.io.ByteArrayInputStream;
-import java.io.ObjectInputStream;
-
-import org.apache.commons.lang.math.RandomUtils;
-
 import com.troila.redis.JedisInterface;
 import com.troila.redis.factory.JedisFactory;
 import com.troila.redis.utils.ConfigureUtils;
@@ -53,8 +48,8 @@ public class RedisService {
 			return (User)BeanUtil.unserialize(redisUtils.getByte(token.getBytes()));
 		}else {
 			User user = new User();
-			user.setUserId(RandomUtils.nextInt());
-			user.setUserName("用户"+user.getUserId());
+			user.setUserId(Integer.parseInt(token));
+			user.setUserName("用户"+token);
 			return user;
 		}
 		

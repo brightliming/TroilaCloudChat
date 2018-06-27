@@ -28,4 +28,5 @@ public final class MessageConstants {
 	public final static String KICK_MESSAGE_ERROR = "踢人消息格式错误";
 	public final static String KICK_ERROR = "踢人接口调用失败";
 	public final static String KICK_SUCCESS = "踢人成功";
+	public final static String REPEAT_LOGIN = "您的账户在其他地方登录，请重新登录";
 }
