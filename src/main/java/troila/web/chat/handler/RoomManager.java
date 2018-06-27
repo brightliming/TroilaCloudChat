@@ -316,8 +316,6 @@ public class RoomManager {
 		try {
 			rwLock.writeLock().lock();
 			boolean newUser = true;
-			// 人员与通道对应
-			userInfos.put(person.getChannel(), person);
 			// room与人员对应
 			if (roomInfos.containsKey(person.getRoomId())) {
 				List<Person> persons = roomInfos.get(person.getRoomId());
@@ -336,12 +334,14 @@ public class RoomManager {
 					tmp.getChannel().close();
 					persons.remove(tmp);
 				}
-				
+				persons.add(person);
 			} else {
 				List<Person> personList = new ArrayList<>();
 				personList.add(person);
 				roomInfos.put(person.getRoomId(), personList);
 			}
+			// 人员与通道对应
+			userInfos.put(person.getChannel(), person);
 			return newUser;
 		} finally {
 			rwLock.writeLock().unlock();

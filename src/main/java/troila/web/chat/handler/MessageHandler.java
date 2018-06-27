@@ -24,6 +24,7 @@ public class MessageHandler extends SimpleChannelInboundHandler<Object> {
         		ChatProto.Message bean = (ChatProto.Message)message;
             	if(!ActionCode.codeList().contains(bean.getHeader())) {
             		logger.warn("Unsupport message code number:"+bean.getHeader());
+            		ctx.writeAndFlush(bean);
             		return; 
             	}
             	ActionFactory.getAction(bean.getHeader()).execute(ctx.channel(),bean.getBody());
